@@ -1,23 +1,70 @@
-import logo from './logo.svg';
-import './App.css';
+import Header from "./Header";
+import Home from "./Home";
+import Checkout from "./Checkout";
+import Payment from "./Payment";
+import { Route, Routes } from "react-router-dom";
+import Login from "./Login";
+import { useEffect } from "react";
+import { useStateValue } from "./StateProvider";
+import { auth } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+
+const promise = loadStripe(
+  "pk_test_51NqKU2SEMCn2biNWboRQ4ULddXeyjChRsEdEd9sVl0zi29ta0Hxak9cWuXAx5KyQuKFcl06CqfkQU8fKp6Yif9bZ00bmosTJKM"
+);
 
 function App() {
+  const [{}, dispatch] = useStateValue();
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (authUser) => {
+      console.log("THE_USER_IS>>", authUser);
+
+      if (authUser) {
+        dispatch({ type: "SET_USER", user: authUser });
+      } else {
+        dispatch({ type: "SET_USER", user: null });
+      }
+    });
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    //BEM
+    <div className="app">
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <Header />
+              <Home />
+            </>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <>
+              <Header />
+              <Checkout />
+            </>
+          }
+        />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/payment"
+          element={
+            <>
+              <Header />
+              <Elements stripe={promise}>
+                <Payment />
+              </Elements>
+            </>
+          }
+        />
+      </Routes>
     </div>
   );
 }
