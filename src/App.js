@@ -10,6 +10,7 @@ import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
+import NotFound from "./NotFound";
 
 const promise = loadStripe(
   "pk_test_51NqKU2SEMCn2biNWboRQ4ULddXeyjChRsEdEd9sVl0zi29ta0Hxak9cWuXAx5KyQuKFcl06CqfkQU8fKp6Yif9bZ00bmosTJKM"
@@ -64,6 +65,7 @@ function App() {
             </>
           }
         />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );
