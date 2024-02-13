@@ -1,24 +1,60 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./Payment.css";
 import { useStateValue } from "./StateProvider";
 import CheckOutProduct from "./CheckOutProduct";
-import { Link } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import CurrencyFormat from "react-currency-format";
+import { getBasketTotal } from "./reducer";
+import { axios } from "./axios";
 
 function Payment() {
   const [{ basket, user }, dispatch] = useStateValue();
+  const [clientSecret, setClientSecret] = useState();
+
+  const history = useHistory();
 
   const stripe = useStripe();
   const elements = useElements();
 
-  const process = "false";
+  const [submitted, setSubmitted] = useState("false");
+  const [process, setProcess] = useState("");
+  const [disabled, setDisabled] = useState("true");
+  const [error, setError] = useState("null");
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const getClientSecret = async () => {
+      const response = await axios({
+        method: "post",
+        url: `/payment/create?Total=${getBasketTotal(basket) * 100}`,
+      });
+      setClientSecret(response);
+    };
+    getClientSecret();
+  }, [basket]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setProcess(true);
+
+    const payload = await stripe
+      .confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: elements.getElement(CardElement),
+        },
+      })
+      .then(({ paymenIntent }) => {
+        setDisabled(true);
+        setError(null);
+        setProcess(false);
+
+        history.replace("/orders");
+      });
   };
 
-  const handleChange = (e) => {
-    console.log(elements);
+  const handleChange = (event) => {
+    setDisabled(event.empty);
+    setError(event.error ? event.error.message : "");
   };
 
   return (
@@ -66,7 +102,30 @@ function Payment() {
             {/* Stripe magic wiil go */}
             <form onSubmit={handleSubmit}>
               <CardElement onChange={handleChange} />
-              <button disabled={process}>Buy Now</button>
+              <div className="payment__priceContainer">
+                <CurrencyFormat
+                  renderText={(value) => (
+                    <>
+                      <p>
+                        Subtotal ({basket?.length} items):{" "}
+                        <strong>{value}</strong>
+                      </p>
+                      <small className="subtotal__gift">
+                        <input type="checkbox" /> This order contains a gift
+                      </small>
+                    </>
+                  )}
+                  decimalScale={2}
+                  value={getBasketTotal(basket)}
+                  displayType={"text"}
+                  thousandSeparator={true}
+                  prefix={"₹"}
+                />
+              </div>
+              <button disabled={process || submitted || disabled}>
+                <span>{process ? "Processing" : "Buy Now"}</span>
+              </button>
+              {error && <div>{error}</div>}
             </form>
           </div>
         </div>
